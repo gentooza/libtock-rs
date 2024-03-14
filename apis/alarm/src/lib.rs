@@ -1,6 +1,8 @@
 #![no_std]
 
 use core::cell::Cell;
+use core::fmt;
+use core::ops::{Add, Sub};
 use libtock_platform as platform;
 use libtock_platform::share;
 use libtock_platform::{DefaultConfig, ErrorCode, Syscalls};
@@ -31,6 +33,28 @@ pub struct Ticks(pub u32);
 impl Convert for Ticks {
     fn to_ticks(self, _freq: Hz) -> Ticks {
         self
+    }
+}
+
+impl Add for Ticks {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Ticks(self.0.wrapping_add(other.0))
+    }
+}
+
+impl Sub for Ticks {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Ticks(self.0.wrapping_sub(other.0))
+    }
+}
+
+impl fmt::Display for Ticks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -68,6 +92,12 @@ impl<S: Syscalls, C: platform::subscribe::Config> Alarm<S, C> {
         S::command(DRIVER_NUM, command::FREQUENCY, 0, 0)
             .to_result()
             .map(Hz)
+    }
+
+    pub fn get_time() -> Result<Ticks, ErrorCode> {
+        S::command(DRIVER_NUM, command::TIME, 0, 0)
+            .to_result()
+            .map(Ticks)
     }
 
     pub fn sleep_for<T: Convert>(time: T) -> Result<(), ErrorCode> {
